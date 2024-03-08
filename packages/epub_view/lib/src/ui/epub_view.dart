@@ -363,7 +363,7 @@ class _EpubViewState extends State<EpubView> {
           builders.chapterDividerBuilder(chapters[chapterIndex]),
         SelectionArea(
           onSelectionChanged: onSelectedContentChanged,
-          contextMenuBuilder: _selectionAreaContextMenuBuilder,
+          contextMenuBuilder: builders.selectionAreaContextMenuBuilder,
           child: Html(
             data: paragraphs[index].element.outerHtml,
             onLinkTap: (href, _, __) => onExternalLinkPressed(href!),
