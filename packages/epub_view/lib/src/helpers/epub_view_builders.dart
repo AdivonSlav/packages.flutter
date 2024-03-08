@@ -27,9 +27,15 @@ typedef ChaptersBuilder = Widget Function(
   int chapterIndex,
   int paragraphIndex,
   ExternalLinkPressed onExternalLinkPressed,
+  SelectedContentChanged onSelectedContentChanged,
 );
 
 typedef ChapterDividerBuilder = Widget Function(EpubChapter value);
+
+typedef SelectionAreaContextMenuBuilder = Widget Function(
+  BuildContext context,
+  SelectableRegionState selectableRegionState,
+);
 
 class EpubViewBuilders<T> {
   /// Root view builder
@@ -37,6 +43,8 @@ class EpubViewBuilders<T> {
 
   final ChaptersBuilder chapterBuilder;
   final ChapterDividerBuilder chapterDividerBuilder;
+
+  final SelectionAreaContextMenuBuilder selectionAreaContextMenuBuilder;
 
   /// Widget showing when epub page loading
   final WidgetBuilder? loaderBuilder;
@@ -52,6 +60,8 @@ class EpubViewBuilders<T> {
     this.builder = _EpubViewState._builder,
     this.chapterBuilder = _EpubViewState._chapterBuilder,
     this.chapterDividerBuilder = _EpubViewState._chapterDividerBuilder,
+    this.selectionAreaContextMenuBuilder =
+        _EpubViewState._selectionAreaContextMenuBuilder,
     this.loaderBuilder,
     this.errorBuilder,
   });

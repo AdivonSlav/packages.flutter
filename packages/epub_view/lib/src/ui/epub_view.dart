@@ -8,6 +8,7 @@ import 'package:epub_view/src/data/models/chapter.dart';
 import 'package:epub_view/src/data/models/chapter_view_value.dart';
 import 'package:epub_view/src/data/models/paragraph.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
@@ -21,6 +22,8 @@ const _minLeadingEdge = -0.05;
 
 typedef ExternalLinkPressed = void Function(String href);
 
+typedef SelectedContentChanged = void Function(SelectedContent? content);
+
 class EpubView extends StatefulWidget {
   const EpubView({
     required this.controller,
@@ -28,6 +31,7 @@ class EpubView extends StatefulWidget {
     this.onChapterChanged,
     this.onDocumentLoaded,
     this.onDocumentError,
+    this.onSelectedContentChanged,
     this.builders = const EpubViewBuilders<DefaultBuilderOptions>(
       options: DefaultBuilderOptions(),
     ),
@@ -45,6 +49,9 @@ class EpubView extends StatefulWidget {
 
   /// Called when a document loading error
   final void Function(Exception? error)? onDocumentError;
+
+  /// Called when a part of the text is selected
+  final SelectedContentChanged? onSelectedContentChanged;
 
   /// Builders
   final EpubViewBuilders builders;
@@ -219,6 +226,10 @@ class _EpubViewState extends State<EpubView> {
     }
   }
 
+  void _onSelectedContentChanged(SelectedContent? value) {
+    widget.onSelectedContentChanged?.call(value);
+  }
+
   Paragraph? _paragraphByIdRef(String idRef) =>
       _paragraphs.firstWhereOrNull((paragraph) {
         if (paragraph.element.id == idRef) {
@@ -316,6 +327,17 @@ class _EpubViewState extends State<EpubView> {
         ),
       );
 
+  static Widget _selectionAreaContextMenuBuilder(
+      BuildContext context, SelectableRegionState selectableRegionState) {
+    final List<ContextMenuButtonItem> buttonItems =
+        selectableRegionState.contextMenuButtonItems;
+
+    return AdaptiveTextSelectionToolbar.buttonItems(
+      buttonItems: buttonItems,
+      anchors: selectableRegionState.contextMenuAnchors,
+    );
+  }
+
   static Widget _chapterBuilder(
     BuildContext context,
     EpubViewBuilders builders,
@@ -326,6 +348,7 @@ class _EpubViewState extends State<EpubView> {
     int chapterIndex,
     int paragraphIndex,
     ExternalLinkPressed onExternalLinkPressed,
+    SelectedContentChanged onSelectedContentChanged,
   ) {
     if (paragraphs.isEmpty) {
       return Container();
@@ -338,33 +361,37 @@ class _EpubViewState extends State<EpubView> {
       children: <Widget>[
         if (chapterIndex >= 0 && paragraphIndex == 0)
           builders.chapterDividerBuilder(chapters[chapterIndex]),
-        Html(
-          data: paragraphs[index].element.outerHtml,
-          onLinkTap: (href, _, __) => onExternalLinkPressed(href!),
-          style: {
-            'html': Style(
-              padding: HtmlPaddings.only(
-                top: (options.paragraphPadding as EdgeInsets?)?.top,
-                right: (options.paragraphPadding as EdgeInsets?)?.right,
-                bottom: (options.paragraphPadding as EdgeInsets?)?.bottom,
-                left: (options.paragraphPadding as EdgeInsets?)?.left,
+        SelectionArea(
+          onSelectionChanged: onSelectedContentChanged,
+          contextMenuBuilder: _selectionAreaContextMenuBuilder,
+          child: Html(
+            data: paragraphs[index].element.outerHtml,
+            onLinkTap: (href, _, __) => onExternalLinkPressed(href!),
+            style: {
+              'html': Style(
+                padding: HtmlPaddings.only(
+                  top: (options.paragraphPadding as EdgeInsets?)?.top,
+                  right: (options.paragraphPadding as EdgeInsets?)?.right,
+                  bottom: (options.paragraphPadding as EdgeInsets?)?.bottom,
+                  left: (options.paragraphPadding as EdgeInsets?)?.left,
+                ),
+              ).merge(Style.fromTextStyle(options.textStyle)),
+            },
+            extensions: [
+              TagExtension(
+                tagsToExtend: {"img"},
+                builder: (imageContext) {
+                  final url =
+                      imageContext.attributes['src']!.replaceAll('../', '');
+                  final content = Uint8List.fromList(
+                      document.Content!.Images![url]!.Content!);
+                  return Image(
+                    image: MemoryImage(content),
+                  );
+                },
               ),
-            ).merge(Style.fromTextStyle(options.textStyle)),
-          },
-          extensions: [
-            TagExtension(
-              tagsToExtend: {"img"},
-              builder: (imageContext) {
-                final url =
-                    imageContext.attributes['src']!.replaceAll('../', '');
-                final content = Uint8List.fromList(
-                    document.Content!.Images![url]!.Content!);
-                return Image(
-                  image: MemoryImage(content),
-                );
-              },
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -388,6 +415,7 @@ class _EpubViewState extends State<EpubView> {
           _getChapterIndexBy(positionIndex: index),
           _getParagraphIndexBy(positionIndex: index),
           _onLinkPressed,
+          _onSelectedContentChanged,
         );
       },
     );
