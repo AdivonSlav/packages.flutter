@@ -8,6 +8,8 @@ class EpubViewTableOfContents extends StatelessWidget {
     this.padding,
     this.itemBuilder,
     this.loader,
+    this.shrinkWrap = false,
+    this.physics,
     Key? key,
   }) : super(key: key);
 
@@ -21,6 +23,8 @@ class EpubViewTableOfContents extends StatelessWidget {
     int itemCount,
   )? itemBuilder;
   final Widget? loader;
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
 
   @override
   Widget build(BuildContext context) =>
@@ -32,6 +36,8 @@ class EpubViewTableOfContents extends StatelessWidget {
           if (data.isNotEmpty) {
             content = ListView.builder(
               padding: padding,
+              shrinkWrap: shrinkWrap,
+              physics: physics,
               key: Key('$runtimeType.content'),
               itemBuilder: (context, index) =>
                   itemBuilder?.call(context, index, data[index], data.length) ??
